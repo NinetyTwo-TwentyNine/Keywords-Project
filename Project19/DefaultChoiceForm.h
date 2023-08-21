@@ -1,7 +1,7 @@
 #pragma once
 
-#include "LevelForm.h"
 #include "Resources.h"
+#include "LevelForm.h"
 
 namespace Project19 {
 
@@ -154,19 +154,19 @@ namespace Project19 {
     }
 
     private: System::Void button1_Click(System::Object^ sender, System::EventArgs^ e) {
-        this->selected_level = "default_level_sport.txt";
+        this->selected_level = GetDefaultLevelDirectory(GAME_LEVEL_SPORT);
         this->button5->Enabled = true;
     }
     private: System::Void button2_Click(System::Object^ sender, System::EventArgs^ e) {
-        this->selected_level = "default_level_standartization.txt";
+        this->selected_level = GetDefaultLevelDirectory(GAME_LEVEL_STANDARTIZATION);
         this->button5->Enabled = true;
     }
     private: System::Void button3_Click(System::Object^ sender, System::EventArgs^ e) {
-        this->selected_level = "default_level_measurement.txt";
+        this->selected_level = GetDefaultLevelDirectory(GAME_LEVEL_MEASUREMENT);
         this->button5->Enabled = true;
     }
     private: System::Void button4_Click(System::Object^ sender, System::EventArgs^ e) {
-        this->selected_level = "default_level_medicine.txt";
+        this->selected_level = GetDefaultLevelDirectory(GAME_LEVEL_MEDICINE);
         this->button5->Enabled = true;
     }
 

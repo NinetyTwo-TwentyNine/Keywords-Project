@@ -1,9 +1,9 @@
 #pragma once
 
-#include "DefaultChoiceForm.h"
-#include "CustomChoiceForm.h"
 #include "Resources.h"
 #include "StatisticsFunctions.h"
+#include "DefaultChoiceForm.h"
+#include "CustomChoiceForm.h"
 
 namespace Project19 {
 

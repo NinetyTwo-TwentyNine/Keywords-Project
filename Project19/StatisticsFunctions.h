@@ -6,10 +6,16 @@ namespace Project19 {
     using namespace System::IO;
     using namespace System::Collections;
 
+    String^ GetStatisticsBaseDirectory()
+    {
+        return "\\vics&defs.txt";
+    }
+
     String^ GetStatisticsDirectory()
     {
-        return "vics&defs.txt";
+        return Directory::GetParent(Environment::CurrentDirectory)->FullName + GetTextFilesBaseDirectory() + GetStatisticsBaseDirectory();
     }
+
 
     Void WriteStatisticsFile(int vics_amount, int defs_amount)
     {

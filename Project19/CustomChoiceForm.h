@@ -1,7 +1,7 @@
 #pragma once
 
-#include "LevelForm.h"
 #include "Resources.h"
+#include "LevelForm.h"
 
 namespace Project19 {
 
