@@ -124,6 +124,7 @@ namespace Project19 {
             this->Controls->Add(this->label1);
             this->Controls->Add(this->label2);
             this->DoubleBuffered = true;
+            this->FormBorderStyle = System::Windows::Forms::FormBorderStyle::FixedSingle;
             this->Icon = (cli::safe_cast<System::Drawing::Icon^>(System::Drawing::Icon::ExtractAssociatedIcon(GetResourcesDirectory(RES_ICON_PATH))));
             this->Name = L"StartForm";
             this->Text = L"Ключворд - Главное меню";

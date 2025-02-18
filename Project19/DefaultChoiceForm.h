@@ -140,6 +140,7 @@ namespace Project19 {
             this->Controls->Add(this->button5);
             this->Controls->Add(this->button6);
             this->DoubleBuffered = true;
+            this->FormBorderStyle = System::Windows::Forms::FormBorderStyle::FixedSingle;
             this->Icon = (cli::safe_cast<System::Drawing::Icon^>(System::Drawing::Icon::ExtractAssociatedIcon(GetResourcesDirectory(RES_ICON_PATH))));
             this->Name = L"DefaultChoiceForm";
             this->Text = L"Ключворд - Выбор уровня";

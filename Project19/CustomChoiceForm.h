@@ -220,7 +220,7 @@ namespace Project19 {
             this->numericUpDown5->Value = System::Decimal(gcnew cli::array< System::Int32 >(4) { 3, 0, 0, 0 });
             // 
             // numericUpDown6
-            // GetResourcesDirectory(
+            // 
             this->numericUpDown6->Location = System::Drawing::Point(300, 250);
             this->numericUpDown6->Maximum = System::Decimal(gcnew cli::array< System::Int32 >(4) { 10, 0, 0, 0 });
             this->numericUpDown6->Name = L"numericUpDown6";
@@ -249,6 +249,7 @@ namespace Project19 {
             this->Controls->Add(this->label1);
             this->Controls->Add(this->button1);
             this->Controls->Add(this->button2);
+            this->FormBorderStyle = System::Windows::Forms::FormBorderStyle::FixedSingle;
             this->Icon = (cli::safe_cast<System::Drawing::Icon^>(System::Drawing::Icon::ExtractAssociatedIcon(GetResourcesDirectory(RES_ICON_PATH))));
             this->Name = L"CustomChoiceForm";
             this->Text = L"Ключворд - Настройки уровня";
