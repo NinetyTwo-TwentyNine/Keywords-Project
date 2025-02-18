@@ -3,6 +3,8 @@
 #include "Resources.h"
 #include "LevelForm.h"
 
+using namespace System::Runtime::InteropServices;
+
 namespace Project19 {
 
 	using namespace System;
@@ -17,10 +19,12 @@ namespace Project19 {
     /// </summary>
     public ref class DefaultChoiceForm : public System::Windows::Forms::Form
     {
+    private: String^ APP_USER_NAME;
     private: System::Windows::Forms::Form^ APP_PREV_FORM;
     public:
-        DefaultChoiceForm(Form^ prev_form)
+        DefaultChoiceForm(Form^ prev_form, String^ username)
         {
+            APP_USER_NAME = username;
             APP_PREV_FORM = prev_form;
             InitializeComponent();
             //
@@ -42,11 +46,43 @@ namespace Project19 {
 
     private: System::Windows::Forms::Button^ button1;
     private: System::Windows::Forms::Button^ button2;
-    private: System::Windows::Forms::Button^ button3;
-    private: System::Windows::Forms::Button^ button4;
-    private: System::Windows::Forms::Button^ button5;
-    private: System::Windows::Forms::Button^ button6;
+    private: ArrayList^ buttonArray;
     private: String^ selected_level;
+    private: int buttonArraySize = 10;
+
+    private: delegate void ManagedCallback(const string& response);
+    private: void myResponseHandler(const string& response) {
+        String^ managedResponse = ""; //marshal_as<String^>(response);
+        for (char c : response)
+            managedResponse += (Char)c;
+
+        try
+        {
+            vector<string> resultVector(0);
+            parseJsonString(resultVector, response);
+
+            for (int i = 0; i < resultVector.size(); i++)
+            {
+                if (i < buttonArraySize)
+                {
+                    String^ resultString = "";
+                    for (char c : resultVector[i])
+                        resultString += (Char)c;
+                    ((Button^)this->buttonArray[i])->Text = resultString;
+                    ((Button^)this->buttonArray[i])->Enabled = true;
+                }
+            }
+
+            this->button1->Enabled = true;
+            this->button2->Enabled = true;
+        }
+        catch (exception e)
+        {
+            System::Windows::Forms::MessageBox::Show("Failed to format server response: " + managedResponse, "Ошибка", MessageBoxButtons::OK, MessageBoxIcon::Error);
+            this->button2->Enabled = true;
+        }
+    }
+
 
     private:
         /// <summary>
@@ -63,136 +99,117 @@ namespace Project19 {
         {
             this->button1 = (gcnew System::Windows::Forms::Button());
             this->button2 = (gcnew System::Windows::Forms::Button());
-            this->button3 = (gcnew System::Windows::Forms::Button());
-            this->button4 = (gcnew System::Windows::Forms::Button());
-            this->button5 = (gcnew System::Windows::Forms::Button());
-            this->button6 = (gcnew System::Windows::Forms::Button());
+            this->buttonArray = (gcnew ArrayList());
             this->SuspendLayout();
             // 
             // button1
             // 
-            this->button1->Location = System::Drawing::Point(75, 150);
+            this->button1->Enabled = false;
+            this->button1->Location = System::Drawing::Point(200, 375);
             this->button1->Name = L"button1";
-            this->button1->Size = System::Drawing::Size(150, 50);
-            this->button1->TabIndex = 1;
-            this->button1->Text = L"Спорт";
+            this->button1->Size = System::Drawing::Size(100, 50);
+            this->button1->TabIndex = buttonArraySize + 1;
+            this->button1->Text = L"Начать игру!";
+            this->button1->Enabled = false;
+            this->button1->UseVisualStyleBackColor = true;
             this->button1->Click += gcnew System::EventHandler(this, &DefaultChoiceForm::button1_Click);
             // 
             // button2
             // 
-            this->button2->Location = System::Drawing::Point(275, 150);
+            this->button2->Location = System::Drawing::Point(200, 440);
             this->button2->Name = L"button2";
-            this->button2->Size = System::Drawing::Size(150, 50);
-            this->button2->TabIndex = 2;
-            this->button2->Text = L"Стандартизация";
+            this->button2->Size = System::Drawing::Size(100, 50);
+            this->button2->TabIndex = buttonArraySize + 2;
+            this->button2->Text = L"Назад";
+            this->button2->Enabled = false;
+            this->button2->UseVisualStyleBackColor = true;
             this->button2->Click += gcnew System::EventHandler(this, &DefaultChoiceForm::button2_Click);
             // 
-            // button3
-            // 
-            this->button3->Location = System::Drawing::Point(75, 225);
-            this->button3->Name = L"button3";
-            this->button3->Size = System::Drawing::Size(150, 50);
-            this->button3->TabIndex = 3;
-            this->button3->Text = L"Измерения";
-            this->button3->Click += gcnew System::EventHandler(this, &DefaultChoiceForm::button3_Click);
-            // 
-            // button4
-            // 
-            this->button4->Location = System::Drawing::Point(275, 225);
-            this->button4->Name = L"button4";
-            this->button4->Size = System::Drawing::Size(150, 50);
-            this->button4->TabIndex = 4;
-            this->button4->Text = L"Медицина";
-            this->button4->Click += gcnew System::EventHandler(this, &DefaultChoiceForm::button4_Click);
-            // 
-            // button5
-            // 
-            this->button5->Enabled = false;
-            this->button5->Location = System::Drawing::Point(200, 375);
-            this->button5->Name = L"button5";
-            this->button5->Size = System::Drawing::Size(100, 50);
-            this->button5->TabIndex = 5;
-            this->button5->Text = L"Начать игру!";
-            this->button5->UseVisualStyleBackColor = true;
-            this->button5->Click += gcnew System::EventHandler(this, &DefaultChoiceForm::button5_Click);
-            // 
-            // button6
-            // 
-            this->button6->Location = System::Drawing::Point(200, 440);
-            this->button6->Name = L"button6";
-            this->button6->Size = System::Drawing::Size(100, 50);
-            this->button6->TabIndex = 6;
-            this->button6->Text = L"Назад";
-            this->button6->UseVisualStyleBackColor = true;
-            this->button6->Click += gcnew System::EventHandler(this, &DefaultChoiceForm::button6_Click);
+            // buttonArray
+            //
+            for (int i = 0; i < this->buttonArraySize; i++)
+            {
+                Button^ curButton = gcnew System::Windows::Forms::Button();
+                this->Controls->Add(curButton);
+                curButton->Name = L"button" + i;
+                curButton->TabIndex = i;
+                curButton->Text = L"";
+                curButton->Enabled = false;
+                curButton->Size = System::Drawing::Size(150, 50);
+                Int16 x, y;
+                y = 30 + 60 * (i / 2);
+                if (i % 2)
+                {
+                    x = 75;
+                }
+                else
+                {
+                    x = 275;
+                }
+                curButton->Location = System::Drawing::Point(x, y);
+                curButton->UseVisualStyleBackColor = true;
+                curButton->Click += gcnew System::EventHandler(this, &DefaultChoiceForm::button_Click);
+                this->buttonArray->Add(curButton);
+            }
             // 
             // DefaultChoiceForm
             // 
             this->AutoScaleDimensions = System::Drawing::SizeF(8, 16);
             this->AutoScaleMode = System::Windows::Forms::AutoScaleMode::Font;
+            this->FormBorderStyle = System::Windows::Forms::FormBorderStyle::FixedSingle;
             this->BackgroundImage = (cli::safe_cast<System::Drawing::Image^>(Image::FromFile(GetResourcesDirectory(RES_BACKGROUND_PATH))));
             this->BackgroundImageLayout = System::Windows::Forms::ImageLayout::Stretch;
             this->ClientSize = System::Drawing::Size(500, 500);
             this->Controls->Add(this->button1);
             this->Controls->Add(this->button2);
-            this->Controls->Add(this->button3);
-            this->Controls->Add(this->button4);
-            this->Controls->Add(this->button5);
-            this->Controls->Add(this->button6);
             this->DoubleBuffered = true;
-            this->Icon = (cli::safe_cast<System::Drawing::Icon^>(System::Drawing::Icon::ExtractAssociatedIcon(GetResourcesDirectory(RES_ICON_PATH))));
+            //this->Icon = (cli::safe_cast<System::Drawing::Icon^>(System::Drawing::Icon::ExtractAssociatedIcon(GetResourcesDirectory(RES_ICON_PATH))));
             this->Name = L"DefaultChoiceForm";
             this->Text = L"Ключворд - Выбор уровня";
             this->ResumeLayout(false);
 
+            this->getUserKeywordPuzzles();
         }
 
 #pragma endregion
-    private: System::Void button6_Click(System::Object^ sender, System::EventArgs^ e) {
+    private: System::Void button_Click(System::Object^ sender, System::EventArgs^ e) {
+        this->selected_level = ((Button^)sender)->Text;
+    }
+
+    private: System::Void button1_Click(System::Object^ sender, System::EventArgs^ e) {
+        if (String::IsNullOrEmpty(this->selected_level))
+        {
+            MessageBox::Show(this, "Пазл не был выбран.", "Ошибка", MessageBoxButtons::OK, MessageBoxIcon::Error);
+            return;
+        }
+
+        LevelForm^ ActualGame = gcnew LevelForm(APP_PREV_FORM, APP_USER_NAME, selected_level);
+        ActualGame->Show();
+        this->Close();
+    }
+
+    private: System::Void button2_Click(System::Object^ sender, System::EventArgs^ e) {
         this->APP_PREV_FORM->Show();
         this->Close();
     }
 
-    private: System::Void button1_Click(System::Object^ sender, System::EventArgs^ e) {
-        this->selected_level = GetDefaultLevelDirectory(GAME_LEVEL_SPORT);
-        this->button5->Enabled = true;
-    }
-    private: System::Void button2_Click(System::Object^ sender, System::EventArgs^ e) {
-        this->selected_level = GetDefaultLevelDirectory(GAME_LEVEL_STANDARTIZATION);
-        this->button5->Enabled = true;
-    }
-    private: System::Void button3_Click(System::Object^ sender, System::EventArgs^ e) {
-        this->selected_level = GetDefaultLevelDirectory(GAME_LEVEL_MEASUREMENT);
-        this->button5->Enabled = true;
-    }
-    private: System::Void button4_Click(System::Object^ sender, System::EventArgs^ e) {
-        this->selected_level = GetDefaultLevelDirectory(GAME_LEVEL_MEDICINE);
-        this->button5->Enabled = true;
-    }
+    private: System::Void getUserKeywordPuzzles() {
+        int requestType = CURL_REQUEST_TYPE_PUZZLES_GET;
+        vector<pair<string, string>> requestData(0);
 
-    private: System::Void button5_Click(System::Object^ sender, System::EventArgs^ e) {
-        int max_time = 300;
-        int max_checks = 10;
-        int max_hints = 15;
-        int field_size = 15;
-        int max_attempts = 3;
-        int first_letters = 5;
+        string username = "";
+        for (int i = 0; i < APP_USER_NAME->Length; i++)
+            username += ((char)APP_USER_NAME[i]);
 
-        String^ FileName = this->selected_level;
-        String^ FileContent;
-        try {
-            StreamReader^ file = File::OpenText(FileName);
-            FileContent = file->ReadToEnd();
-        }
-        catch (Exception^ e) {
-            MessageBox::Show(this, "Не удалось открыть файл.", "Ошибка", MessageBoxButtons::OK, MessageBoxIcon::Error);
-            return;
-        }
-        FileContent = FileContent->ToUpper();
+        requestData.push_back(pair<string, string>("username", username));
 
-        this->Hide();
-        LevelForm^ ActualGame = gcnew LevelForm(this, max_time, max_checks, max_hints, max_attempts, first_letters, field_size, FileContent);
-        ActualGame->Show();
+        // Create a managed delegate instance
+        ManagedCallback^ managedCallback = gcnew ManagedCallback(this, &DefaultChoiceForm::myResponseHandler);
+        // Convert managed delegate to unmanaged function pointer
+        IntPtr ptr = Marshal::GetFunctionPointerForDelegate(managedCallback);
+        ResponseCallback nativeCallback = (ResponseCallback)ptr.ToPointer();
+        // Call the function
+        curlClient().performCurlRequest(nativeCallback, requestType, requestData);
     }
     };
 }

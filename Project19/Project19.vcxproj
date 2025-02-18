@@ -119,12 +119,13 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="StartForm.cpp" />
+    <ClCompile Include="SigninForm.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CustomChoiceForm.h" />
     <ClInclude Include="DefaultChoiceForm.h" />
     <ClInclude Include="LevelForm.h" />
+    <ClInclude Include="SigninForm.h" />
     <ClInclude Include="StartForm.h" />
     <ClInclude Include="x64\LevelForm.h">
       <FileType>CppForm</FileType>

@@ -1,4 +1,4 @@
-#include "StartForm.h"
+#include "SigninForm.h"
 #include <Windows.h>
 
 using namespace Project19;
@@ -7,6 +7,6 @@ using namespace Project19;
 int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
     Application::EnableVisualStyles();
     Application::SetCompatibleTextRenderingDefault(false);
-    Application::Run(gcnew StartForm);
+    Application::Run(gcnew SigninForm);
     return 0;
 }

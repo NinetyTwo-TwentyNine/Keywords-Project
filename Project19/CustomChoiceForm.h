@@ -1,7 +1,8 @@
 #pragma once
 
 #include "Resources.h"
-#include "LevelForm.h"
+
+using namespace System::Runtime::InteropServices;
 
 namespace Project19 {
 
@@ -17,10 +18,15 @@ namespace Project19 {
     /// </summary>
     public ref class CustomChoiceForm : public System::Windows::Forms::Form
     {
+    private: String^ APP_USER_NAME;
     private: System::Windows::Forms::Form^ APP_PREV_FORM;
+
+    private: String^ APP_FILE_NAME;
+    private: String^ APP_FILE_CONTENT;
     public:
-        CustomChoiceForm(Form^ prev_form)
+        CustomChoiceForm(Form^ prev_form, String^ username)
         {
+            APP_USER_NAME = username;
             APP_PREV_FORM = prev_form;
             InitializeComponent();
             //
@@ -53,6 +59,19 @@ namespace Project19 {
     private: System::Windows::Forms::NumericUpDown^ numericUpDown4;
     private: System::Windows::Forms::NumericUpDown^ numericUpDown5;
     private: System::Windows::Forms::NumericUpDown^ numericUpDown6;
+
+    private: delegate void ManagedCallback(const string& response);
+    private: void myResponseHandler(const string& response) {
+        String^ managedResponse = ""; //marshal_as<String^>(response);
+        for (char c : response)
+            managedResponse += (Char)c;
+
+        System::Windows::Forms::MessageBox::Show("Server Response: " + managedResponse);
+
+        this->button1->Enabled = true;
+        this->button2->Enabled = true;
+    }
+
 
     private:
         /// <summary>
@@ -95,7 +114,7 @@ namespace Project19 {
             this->button1->Name = L"button1";
             this->button1->Size = System::Drawing::Size(100, 50);
             this->button1->TabIndex = 1;
-            this->button1->Text = L"Начать игру!";
+            this->button1->Text = L"Отправить свой файл!";
             this->button1->UseVisualStyleBackColor = true;
             this->button1->Click += gcnew System::EventHandler(this, &CustomChoiceForm::button1_Click);
             // 
@@ -220,7 +239,7 @@ namespace Project19 {
             this->numericUpDown5->Value = System::Decimal(gcnew cli::array< System::Int32 >(4) { 3, 0, 0, 0 });
             // 
             // numericUpDown6
-            // GetResourcesDirectory(
+            // 
             this->numericUpDown6->Location = System::Drawing::Point(300, 250);
             this->numericUpDown6->Maximum = System::Decimal(gcnew cli::array< System::Int32 >(4) { 10, 0, 0, 0 });
             this->numericUpDown6->Name = L"numericUpDown6";
@@ -232,6 +251,7 @@ namespace Project19 {
             // 
             this->AutoScaleDimensions = System::Drawing::SizeF(8, 16);
             this->AutoScaleMode = System::Windows::Forms::AutoScaleMode::Font;
+            this->FormBorderStyle = System::Windows::Forms::FormBorderStyle::FixedSingle;
             this->BackgroundImage = (cli::safe_cast<System::Drawing::Image^>(Image::FromFile(GetResourcesDirectory(RES_BACKGROUND_PATH))));
             this->BackgroundImageLayout = System::Windows::Forms::ImageLayout::Stretch;
             this->ClientSize = System::Drawing::Size(500, 500);
@@ -249,7 +269,7 @@ namespace Project19 {
             this->Controls->Add(this->label1);
             this->Controls->Add(this->button1);
             this->Controls->Add(this->button2);
-            this->Icon = (cli::safe_cast<System::Drawing::Icon^>(System::Drawing::Icon::ExtractAssociatedIcon(GetResourcesDirectory(RES_ICON_PATH))));
+            //this->Icon = (cli::safe_cast<System::Drawing::Icon^>(System::Drawing::Icon::ExtractAssociatedIcon(GetResourcesDirectory(RES_ICON_PATH))));
             this->Name = L"CustomChoiceForm";
             this->Text = L"Ключворд - Настройки уровня";
             (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->numericUpDown1))->EndInit();
@@ -288,14 +308,64 @@ namespace Project19 {
         }
         FileContent = FileContent->ToUpper();
 
-        this->Hide();
-        LevelForm^ ActualGame = gcnew LevelForm(this, max_time, max_checks, max_hints, max_attempts, first_letters, field_size, FileContent);
-        ActualGame->Show();
-    }
+        APP_FILE_NAME = System::IO::Path::GetFileName(FileName);
+        APP_FILE_CONTENT = FileContent;
 
+        uploadKeywordPuzzle(max_time, max_checks, max_hints, field_size, max_attempts, first_letters);
+    }
+    
     private: System::Void button2_Click(System::Object^ sender, System::EventArgs^ e) {
         this->APP_PREV_FORM->Show();
         this->Close();
+    }
+
+    //private: System::Void button3_Click(System::Object^ sender, System::EventArgs^ e) {
+    //    LevelForm^ ActualGame = gcnew LevelForm(APP_PREV_FORM, APP_USER_NAME);
+    //    ActualGame->Show();
+    //    this->Close();
+    //}
+
+    private: System::Void uploadKeywordPuzzle(int max_time, int max_checks, int max_hints, int field_size, int max_attempts, int first_letters) {
+        int requestType = CURL_REQUEST_TYPE_PUZZLE_UPLOADFILE;
+        vector<pair<string, string>> requestData(0);
+
+        string username = "";
+        for (int i = 0; i < APP_USER_NAME->Length; i++)
+            username += ((char)APP_USER_NAME[i]);
+        string filename = "";
+        for (int i = 0; i < APP_FILE_NAME->Length; i++)
+            filename += ((char)APP_FILE_NAME[i]);
+        string filecontent = "";
+        for (int i = 0; i < APP_FILE_CONTENT->Length; i++)
+        {
+            if (Char::IsLetter(APP_FILE_CONTENT[i]))
+            {
+                filecontent += ((char)APP_FILE_CONTENT[i]);
+            }
+            else
+            {
+                filecontent += " ";
+            }
+        }
+
+        requestData.push_back(pair<string, string>("username", username));
+        requestData.push_back(pair<string, string>("filename", filename));
+        requestData.push_back(pair<string, string>("content", filecontent));
+        requestData.push_back(pair<string, string>("max_time", to_string(max_time)));
+        requestData.push_back(pair<string, string>("max_checks", to_string(max_checks)));
+        requestData.push_back(pair<string, string>("max_hints", to_string(max_hints)));
+        requestData.push_back(pair<string, string>("field_size", to_string(field_size)));
+        requestData.push_back(pair<string, string>("max_attempts", to_string(max_attempts)));
+        requestData.push_back(pair<string, string>("first_letters", to_string(first_letters)));
+
+
+        // Create a managed delegate instance
+        ManagedCallback^ managedCallback = gcnew ManagedCallback(this, &CustomChoiceForm::myResponseHandler);
+        // Convert managed delegate to unmanaged function pointer
+        IntPtr ptr = Marshal::GetFunctionPointerForDelegate(managedCallback);
+        ResponseCallback nativeCallback = (ResponseCallback)ptr.ToPointer();
+        // Call the function
+        curlClient().performCurlRequest(nativeCallback, requestType, requestData);
     }
     };
 }

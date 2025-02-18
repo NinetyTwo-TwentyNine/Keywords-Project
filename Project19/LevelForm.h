@@ -1,13 +1,19 @@
 #pragma once
 
 #include "Resources.h"
-#include "StatisticsFunctions.h"
-#include "FieldGeneration.cpp"
+#include "StartForm.h"
+#include "CurlManagement.cpp"
+
+using namespace System::Runtime::InteropServices;
 
 using namespace std;
 
+const int DIR_HORIZONTAL = 0, DIR_VERTICAL = 1;
+const int DIR_UP = 0, DIR_DOWN = 1, DIR_LEFT = 2, DIR_RIGHT = 3;
+
 vector <vector<char>> GAME_MATRIX;
 vector <vector<vector<bool>>> GAME_MATRIX_ORIGINS;
+vector <vector<vector<bool>>> GAME_MATRIX_DIRECTIONS;
 
 
 namespace Project19 {
@@ -28,21 +34,18 @@ namespace Project19 {
     public ref class LevelForm : public System::Windows::Forms::Form
     {
     private: int GAME_MAX_HINTS, GAME_MAX_CHECKS, GAME_MAX_TIME, GAME_MAX_ATTEMPTS, GAME_FIRST_LETTERS, GAME_FIELD_SIZE;
-    private: String^ APP_FILE_CONTENT;
+    private: String^ APP_USER_NAME;
+    private: String^ APP_FILE_NAME;
     private: Form^ APP_PREV_WINDOW;
 
     public:
-        LevelForm(Form^ prev_window, int max_time, int max_checks, int max_hints, int max_attempts, int first_letters, int field_size, String^ file_content)
+        LevelForm(Form^ prev_window, String^ username, String^ filecontent)
         {
+            APP_USER_NAME = username;
+            APP_FILE_NAME = filecontent;
             APP_PREV_WINDOW = prev_window;
-            GAME_MAX_TIME = max_time;
-            GAME_MAX_CHECKS = max_checks;
-            GAME_MAX_HINTS = max_hints;
-            GAME_MAX_ATTEMPTS = max_attempts;
-            GAME_FIRST_LETTERS = first_letters;
-            GAME_FIELD_SIZE = field_size;
-            APP_FILE_CONTENT = file_content;
-            InitializeComponent();
+            this->getKeywordPuzzle();
+            //InitializeComponent();
             //
             //TODO: добавьте код конструктора
             //
@@ -80,7 +83,66 @@ namespace Project19 {
     private: int game_hints, game_checks, game_time, game_attempts;
     private: bool checkEnabled = false;
 
-    protected:
+    private: delegate void ManagedCallback(const string& response);
+    private: void myResponseHandler1(const string& response) {
+        String^ managedResponse = ""; //marshal_as<String^>(response);
+        for (char c : response)
+            managedResponse += (Char)c;
+
+        try
+        {
+            vector <int> gameParams(0);
+            GAME_MATRIX_DIRECTIONS = vector <vector<vector<bool>>> (0, vector<vector<bool>>(0)); // first bool for horizontal, second bool for vertical
+            GAME_MATRIX_ORIGINS = vector <vector<vector<bool>>>(0, vector<vector<bool>>(0));
+            GAME_MATRIX = vector<vector<char>>(0, vector<char>(0));
+            
+            parseJsonString(GAME_MATRIX_DIRECTIONS, GAME_MATRIX_ORIGINS, GAME_MATRIX, gameParams, response);
+
+            GAME_MAX_TIME = gameParams[0];
+            GAME_MAX_CHECKS = gameParams[1];
+            GAME_MAX_HINTS = gameParams[2];
+            GAME_FIELD_SIZE = gameParams[3];
+            GAME_MAX_ATTEMPTS = gameParams[4];
+            GAME_FIRST_LETTERS = gameParams[5];
+
+            //cout << "Results:" << endl;
+            //cout << "gameParams size = " << gameParams.size() << endl;
+            //cout << "directionsArr size: " << GAME_FIELD_SIZE << " vs " << GAME_MATRIX_DIRECTIONS.size() << "/" << GAME_MATRIX_DIRECTIONS[0].size() << endl;
+            //cout << "originsMatrix size: " << GAME_FIELD_SIZE << " vs " << GAME_MATRIX_ORIGINS.size() << "/" << GAME_MATRIX_ORIGINS[0].size() << endl;
+            //cout << "gameMatrix size: " << GAME_FIELD_SIZE << " vs " << GAME_MATRIX.size() << "/" << GAME_MATRIX[0].size() << endl;
+
+            if (GAME_MATRIX_DIRECTIONS.size() != GAME_FIELD_SIZE || GAME_MATRIX_DIRECTIONS[0].size() != GAME_FIELD_SIZE)
+            {
+                throw(exception("DirectionsArray size mismatch."));
+            }
+            if (GAME_MATRIX_ORIGINS.size() != GAME_FIELD_SIZE || GAME_MATRIX_ORIGINS[0].size() != GAME_FIELD_SIZE)
+            {
+                throw(exception("OriginsMatrix size mismatch."));
+            }
+            if (GAME_MATRIX.size() != GAME_FIELD_SIZE || GAME_MATRIX[0].size() != GAME_FIELD_SIZE)
+            {
+                throw(exception("GameMatrix size mismatch."));
+            }
+
+            InitializeComponent();
+        }
+        catch (exception e)
+        {
+            System::Windows::Forms::MessageBox::Show("Failed to format server response: " + managedResponse, "Ошибка", MessageBoxButtons::OK, MessageBoxIcon::Error);
+            this->APP_PREV_WINDOW->Show();
+            this->Close();
+        }
+    }
+    private: void myResponseHandler2(const string& response) {
+        String^ managedResponse = ""; //marshal_as<String^>(response);
+        for (char c : response)
+            managedResponse += (Char)c;
+
+        System::Windows::Forms::MessageBox::Show("Server response: " + managedResponse);
+        this->panel2->Enabled = true;
+    }
+
+
     private:
         /// <summary>
         /// Обязательная переменная конструктора.
@@ -298,7 +360,7 @@ namespace Project19 {
             this->Margin = System::Windows::Forms::Padding(4);
             this->Name = L"LevelForm";
             this->Text = L"Ключворд - Игра";
-            this->Icon = (cli::safe_cast<System::Drawing::Icon^>(System::Drawing::Icon::ExtractAssociatedIcon(GetResourcesDirectory(RES_ICON_PATH))));
+            //this->Icon = (cli::safe_cast<System::Drawing::Icon^>(System::Drawing::Icon::ExtractAssociatedIcon(GetResourcesDirectory(RES_ICON_PATH))));
             this->Load += gcnew System::EventHandler(this, &LevelForm::LevelForm_Load);
             this->ResumeLayout(false);
             this->PerformLayout();
@@ -306,35 +368,7 @@ namespace Project19 {
 
 #pragma endregion
     private: System::Void LevelForm_Load(System::Object^ sender, System::EventArgs^ e) {
-        string stringcontent = "";
-        for (int i = 0; i < APP_FILE_CONTENT->Length; i++)
-        {
-            if (Char::IsLetter(APP_FILE_CONTENT[i]))
-            {
-                stringcontent += ((char)APP_FILE_CONTENT[i]);
-            }
-            else
-            {
-                stringcontent += ' ';
-            }
-        }
-        vector<string> words = createVectorFromContent(stringcontent);
-        limitWords(words, GAME_FIELD_SIZE);
-        if (words.empty())
-        {
-            MessageBox::Show(this, "В файле не было слов подходящего формата", "Ошибка", MessageBoxButtons::OK, MessageBoxIcon::Error);
-            APP_PREV_WINDOW->Show();
-            this->Close();
-            return;
-        }
-
         const int ARR_SIZE = GAME_FIELD_SIZE;
-        vector <vector<vector<bool>>> directionArr(ARR_SIZE, vector<vector<bool>>(ARR_SIZE)); // first bool for horizontal, second bool for vertical
-        GAME_MATRIX_ORIGINS = vector <vector<vector<bool>>>(ARR_SIZE, vector<vector<bool>>(ARR_SIZE));
-        GAME_MATRIX = vector<vector<char>>(ARR_SIZE, vector<char>(ARR_SIZE));
-
-        initialMatrixSetup(GAME_MATRIX, GAME_MATRIX_ORIGINS, directionArr);
-        actualMatrixSetup(GAME_MATRIX, words, GAME_MATRIX_ORIGINS, directionArr);
 
             for (int i = 0; i < ARR_SIZE; i++)
             {
@@ -578,18 +612,18 @@ namespace Project19 {
         this->button1->Enabled = false;
         this->button2->Enabled = false;
         this->button3->Enabled = false;
-        this->panel2->Enabled = true;
-        this->panel2->Visible = true;
 
-        ArrayList^ stats_arr = ReadStatisticsFile();
-        Int16 vics_amount = ((Int16)stats_arr[0]);
-        Int16 defs_amount = ((Int16)stats_arr[1]);
+        this->panel2->Visible = true;
+        this->panel2->Enabled = true;
+
         if (win)
         {
             this->panel2->BackgroundImage = this->win_image;
             this->button6->Visible = false;
             this->button6->Enabled = false;
-            vics_amount++;
+
+            this->panel2->Enabled = false;
+            updateUserStatistics(true);
         }
         else
         {
@@ -597,10 +631,10 @@ namespace Project19 {
             this->button6->Visible = true;
             this->button6->Enabled = (this->game_attempts > 0);
             if (this->game_attempts <= 0) {
-                defs_amount++;
+                this->panel2->Enabled = false;
+                updateUserStatistics(false);
             }
         }
-        WriteStatisticsFile(vics_amount, defs_amount);
     }
 
     private: System::Void gameReload_Visualize() {
@@ -616,6 +650,57 @@ namespace Project19 {
         this->panel2->Enabled = false;
         this->panel2->Visible = false;
         timer1->Start();
+    }
+
+    private: System::Void getKeywordPuzzle() {
+        string username = "";
+        for (int i = 0; i < APP_USER_NAME->Length; i++)
+            username += ((char)APP_USER_NAME[i]);
+        string filename = "";
+        for (int i = 0; i < APP_FILE_NAME->Length; i++)
+            filename += ((char)APP_FILE_NAME[i]);
+
+        int requestType = CURL_REQUEST_TYPE_PUZZLE_FROMFILE;
+        vector<pair<string, string>> requestData(0);
+        requestData.push_back(pair<string, string>("username", username));
+        requestData.push_back(pair<string, string>("filename", filename));
+
+
+        // Create a managed delegate instance
+        ManagedCallback^ managedCallback = gcnew ManagedCallback(this, &LevelForm::myResponseHandler1);
+        // Convert managed delegate to unmanaged function pointer
+        IntPtr ptr = Marshal::GetFunctionPointerForDelegate(managedCallback);
+        ResponseCallback nativeCallback = (ResponseCallback)ptr.ToPointer();
+        // Call the function
+        curlClient().performCurlRequest(nativeCallback, requestType, requestData);
+    }
+
+    private: System::Void updateUserStatistics(bool win) {
+        string username = "";
+        for (int i = 0; i < APP_USER_NAME->Length; i++)
+            username += ((char)APP_USER_NAME[i]);
+
+        int requestType;
+        if (win)
+        {
+            requestType = CURL_REQUEST_TYPE_STATISTICS_UPLOAD_VICTORY;
+        }
+        else
+        {
+            requestType = CURL_REQUEST_TYPE_STATISTICS_UPLOAD_DEFEAT;
+        }
+
+        vector<pair<string, string>> requestData(0);
+        requestData.push_back(pair<string, string>("username", username));
+
+
+        // Create a managed delegate instance
+        ManagedCallback^ managedCallback = gcnew ManagedCallback(this, &LevelForm::myResponseHandler2);
+        // Convert managed delegate to unmanaged function pointer
+        IntPtr ptr = Marshal::GetFunctionPointerForDelegate(managedCallback);
+        ResponseCallback nativeCallback = (ResponseCallback)ptr.ToPointer();
+        // Call the function
+        curlClient().performCurlRequest(nativeCallback, requestType, requestData);
     }
     };
 }

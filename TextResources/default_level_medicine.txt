@@ -1,8 +1,0 @@
-hypertension
-bronchitis
-pneumonia
-syndrome
-pulse
-etiology
-bedsore
-tachycardia

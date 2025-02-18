@@ -1,7 +1,6 @@
 #pragma once
 
 const int RES_BACKGROUND_PATH = 0, RES_VICTORY_PATH = 1, RES_DEFEAT_PATH = 2, RES_ICON_PATH = 3;
-const int GAME_LEVEL_SPORT = 0, GAME_LEVEL_STANDARTIZATION = 1, GAME_LEVEL_MEASUREMENT = 2, GAME_LEVEL_MEDICINE = 3;
 
 namespace Project19 {
 
@@ -36,31 +35,55 @@ namespace Project19 {
     }
 
 
-
-
     String^ GetTextFilesBaseDirectory()
     {
         return "\\TextResources";
     }
 
-    String^ GetDefaultLevelDirectory(int type)
+    String^ GetUserInfoDirectory()
     {
-        String^ directory = "";
-        switch (type)
-        {
-        case GAME_LEVEL_SPORT:
-            directory = "\\default_level_sport.txt";
-            break;
-        case GAME_LEVEL_MEDICINE:
-            directory = "\\default_level_medicine.txt";
-            break;
-        case GAME_LEVEL_STANDARTIZATION:
-            directory = "\\default_level_standartization.txt";
-            break;
-        case GAME_LEVEL_MEASUREMENT:
-            directory = "\\default_level_measurement.txt";
-            break;
-        }
+        String^ directory = directory = "\\user.txt";
         return Directory::GetParent(Environment::CurrentDirectory)->FullName + GetTextFilesBaseDirectory() + directory;
+    }
+
+
+    Void WriteUserFile(String^ username)
+    {
+        String^ FileName = GetUserInfoDirectory();
+        StreamWriter^ outFile = gcnew StreamWriter(FileName);
+
+        outFile->Write(username);
+        outFile->Close();
+    }
+
+    String^ ReadUserFile() {
+        String^ FileContent;
+        String^ FileName = GetUserInfoDirectory();
+
+        Boolean any_errors = false;
+        try {
+            StreamReader^ file = File::OpenText(FileName);
+            FileContent = file->ReadToEnd();
+            file->Close();
+        }
+        catch (Exception^ e) {
+            FileContent = "";
+            any_errors = true;
+        }
+
+        String^ FileContentFinal = "";
+        for (int i = 0; i < FileContent->Length; i++)
+        {
+            if (Char::IsLetterOrDigit(FileContent[i]))
+            {
+                FileContentFinal += FileContent[i];
+            }
+        }
+
+        if (any_errors)
+        {
+            WriteUserFile(FileContentFinal);
+        }
+        return FileContentFinal;
     }
 }
