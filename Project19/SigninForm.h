@@ -13,13 +13,6 @@ namespace Project19 {
 	using namespace System::Data;
 	using namespace System::Drawing;
 
-    //void EnableConsole() {
-    //    AllocConsole();  // Create a new console window
-    //    freopen("CONOUT$", "w", stdout);  // Redirect stdout to console
-    //    freopen("CONOUT$", "w", stderr);  // Redirect stderr to console
-    //    cout << "Console is now attached!" << endl;
-    //}
-
     /// <summary>
     /// Сводка для SigninForm
     /// </summary>
@@ -47,6 +40,7 @@ namespace Project19 {
             }
         }
 
+    private: ManagedCallback^ _callbackRoot;
     private: System::Windows::Forms::TextBox^ text1;
     private: System::Windows::Forms::TextBox^ text2;
     private: System::Windows::Forms::TextBox^ text3;
@@ -61,9 +55,12 @@ namespace Project19 {
     private: System::Windows::Forms::Timer^ timer1;
     private: bool registrationMode = false;
     
-    private: delegate void ManagedCallback(const string& response);
     private: void myResponseHandler1(const string& response) {
-        if (response.find("\"result\":true") != -1)
+        String^ managedResponse = gcnew String(response.c_str());
+        this->Invoke(gcnew Action<String^>(this, &SigninForm::handleResponseType1), managedResponse); // marshal to UI thread, in case we're on a separate thread
+    }
+    private: void handleResponseType1(String^ response) {
+        if (response->IndexOf("\"result\":true") != -1)
         {
             this->Hide();
             StartForm^ start_form = gcnew StartForm(this, APP_USER_NAME);
@@ -72,8 +69,13 @@ namespace Project19 {
         this->button1->Enabled = true;
         this->button2->Enabled = true;
     }
+
     private: void myResponseHandler2(const string& response) {
-        if (response.find("\"result\":true") != -1)
+        String^ managedResponse = gcnew String(response.c_str());
+        this->Invoke(gcnew Action<String^>(this, &SigninForm::handleResponseType2), managedResponse);
+    }
+    private: void handleResponseType2(String^ response) {
+        if (response->IndexOf("\"result\":true") != -1)
         {
             this->Hide();
             StartForm^ start_form = gcnew StartForm(this, APP_USER_NAME);
@@ -81,11 +83,7 @@ namespace Project19 {
         }
         else
         {
-            String^ managedResponse = ""; //marshal_as<String^>(response);
-            for (char c : response)
-                managedResponse += (Char)c;
-
-            System::Windows::Forms::MessageBox::Show("Server Response: " + managedResponse);
+            System::Windows::Forms::MessageBox::Show("Server Response: " + response);
         }
         this->button1->Enabled = true;
         this->button2->Enabled = true;
@@ -349,13 +347,8 @@ namespace Project19 {
         vector<pair<string, string>> requestData(0);
         requestData.push_back(pair<string, string>("username", username));
 
-        // Create a managed delegate instance
-        ManagedCallback^ managedCallback = gcnew ManagedCallback(this, &SigninForm::myResponseHandler1);
-        // Convert managed delegate to unmanaged function pointer
-        IntPtr ptr = Marshal::GetFunctionPointerForDelegate(managedCallback);
-        ResponseCallback nativeCallback = (ResponseCallback)ptr.ToPointer();
-        // Call the function
-        curlClient().performCurlRequest(nativeCallback, requestType, requestData);
+        _callbackRoot = gcnew ManagedCallback(this, &SigninForm::myResponseHandler1);
+        PerformCurlRequest(_callbackRoot, requestType, requestData);
     }
 
     private: System::Void sendUserData() {
@@ -408,13 +401,8 @@ namespace Project19 {
         }
 
 
-        // Create a managed delegate instance
-        ManagedCallback^ managedCallback = gcnew ManagedCallback(this, &SigninForm::myResponseHandler2);
-        // Convert managed delegate to unmanaged function pointer
-        IntPtr ptr = Marshal::GetFunctionPointerForDelegate(managedCallback);
-        ResponseCallback nativeCallback = (ResponseCallback)ptr.ToPointer();
-        // Call the function
-        curlClient().performCurlRequest(nativeCallback, requestType, requestData);
+        _callbackRoot = gcnew ManagedCallback(this, &SigninForm::myResponseHandler2);
+        PerformCurlRequest(_callbackRoot, requestType, requestData);
     }
 };
 }

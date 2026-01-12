@@ -45,6 +45,7 @@ namespace Project19 {
             }
         }
 
+    private: ManagedCallback^ _callbackRoot;
     private: System::Windows::Forms::Button^ button1;
     private: System::Windows::Forms::Button^ button2;
     private: System::Windows::Forms::Button^ button3;
@@ -54,12 +55,12 @@ namespace Project19 {
     private: System::Windows::Forms::Timer^ timer1;
     private: System::ComponentModel::IContainer^ components;
 
-    private: delegate void ManagedCallback(const string& response);
-    private: void myResponseHandler(const string& response) {
-        String^ managedResponse = ""; //marshal_as<String^>(response);
-        for (char c : response)
-            managedResponse += (Char)c;
-
+    private: void myResponseHandler1(const string& response) {
+        String^ managedResponse = gcnew String(response.c_str());
+        this->Invoke(gcnew Action<String^>(this, &StartForm::handleResponseType1), managedResponse); // marshal to UI thread, in case we're on a separate thread
+    }
+    private: void handleResponseType1(String^ managedResponse) {
+        string response = msclr::interop::marshal_as<string>(managedResponse);
         try
         {
             vector<pair<string, int>> resultVector(0);
@@ -234,13 +235,8 @@ namespace Project19 {
         requestData.push_back(pair<string, string>("username", username));
 
 
-        // Create a managed delegate instance
-        ManagedCallback^ managedCallback = gcnew ManagedCallback(this, &StartForm::myResponseHandler);
-        // Convert managed delegate to unmanaged function pointer
-        IntPtr ptr = Marshal::GetFunctionPointerForDelegate(managedCallback);
-        ResponseCallback nativeCallback = (ResponseCallback)ptr.ToPointer();
-        // Call the function
-        curlClient().performCurlRequest(nativeCallback, requestType, requestData);
+        _callbackRoot = gcnew ManagedCallback(this, &StartForm::myResponseHandler1);
+        PerformCurlRequest(_callbackRoot, requestType, requestData);
     }
 };
 }

@@ -1,5 +1,10 @@
 #pragma once
 
+#include <msclr/marshal_cppstd.h>
+
+using namespace std;
+
+
 const int RES_BACKGROUND_PATH = 0, RES_VICTORY_PATH = 1, RES_DEFEAT_PATH = 2, RES_ICON_PATH = 3;
 
 namespace Project19 {
@@ -7,6 +12,7 @@ namespace Project19 {
     using namespace System;
     using namespace System::IO;
     using namespace System::Collections;
+    using namespace System::Runtime::InteropServices;
 
     String^ GetResourcesBaseDirectory()
     {

@@ -5,12 +5,22 @@
 #include <cmath>
 #include <string>
 #include <sstream>
+#include <thread>
+#include <chrono>
 
 #include <curl/curl.h>
 
 using namespace std;
 
 namespace Project19 {
+
+    using namespace System;
+    using namespace System::IO;
+    using namespace System::Collections;
+    using namespace System::Runtime::InteropServices;
+
+
+    const string APP_SERVER_LINK = "http://www.example.com/"; // Switch to the API link
 
     const int CURL_REQUEST_TYPE_LOGIN = 0, CURL_REQUEST_TYPE_REGISTER = 1, CURL_REQUEST_TYPE_STATISTICS_GET = 2, CURL_REQUEST_TYPE_STATISTICS_UPLOAD_VICTORY = 3, CURL_REQUEST_TYPE_STATISTICS_UPLOAD_DEFEAT = 4,
               CURL_REQUEST_TYPE_PUZZLES_GET = 5, CURL_REQUEST_TYPE_PUZZLE_FROMFILE = 6, CURL_REQUEST_TYPE_PUZZLE_UPLOADFILE = 7;
@@ -242,15 +252,19 @@ namespace Project19 {
         return totalSize;
     }
 
-    typedef void (*ResponseCallback)(const string&);
+    typedef void(__stdcall* ResponseCallback)(const string&);
+    [UnmanagedFunctionPointer(CallingConvention::StdCall)]
+    delegate void ManagedCallback(const string& response);
 
-    static class curlClient {
+    static class CurlClient {
+    private:
+        string CURL_SERVER_LINK;
+
     public:
-        curlClient(void)
+        CurlClient(string cUrl_server_link)
         {
-
+            CURL_SERVER_LINK = cUrl_server_link;
         }
-        const string CURL_SERVER_LINK = "http://www.example.com/"; // Switch to the API link
 
         string getRequestLink(int type)
         {
@@ -269,16 +283,27 @@ namespace Project19 {
         }
 
         void performCurlRequest(ResponseCallback callback, int requestType, vector<pair<string, string>> jsonArgs) {
-            CURL* curl = curl_easy_init();
-            if (curl) {
-                string response;
-
+            string requestString = getRequestLink(requestType);
+            
+            thread([callback, requestString, jsonArgs]() {
+                CURL* curl = curl_easy_init();
+                if (!curl)
+                {
+                    //cout << "cUrl Failure. Application death in 3 seconds." << endl;
+                    //this_thread::sleep_for(chrono::milliseconds(3000));
+                    throw(runtime_error("Failed to initialize cURL"));
+                }
+                
+                string response = "";
+                
                 string json_data = "{";
                 for (pair<string, string> kvPair : jsonArgs)
                 {
                     if (kvPair.first.empty())
                     {
-                        throw(exception("Supplied with an empty key."));
+                        //cout << "Supplied argument failure. Application death in 3 seconds." << endl;
+                        //this_thread::sleep_for(chrono::milliseconds(3000));
+                        throw(runtime_error("Supplied with an empty key."));
                     }
                     json_data += "\"" + kvPair.first + "\": \"" + kvPair.second + "\"";
                     if (jsonArgs[jsonArgs.size() - 1] != kvPair)
@@ -287,40 +312,47 @@ namespace Project19 {
                     }
                 }
                 json_data += "}";
-
+                
                 //cout << "Resulting json data: " << json_data << endl;
-
+                
                 struct curl_slist* headers = nullptr;
                 headers = curl_slist_append(headers, "Content-Type: application/json");
                 headers = curl_slist_append(headers, "Accept: application/json");
 
-                curl_easy_setopt(curl, CURLOPT_URL, getRequestLink(requestType).c_str());
+                curl_easy_setopt(curl, CURLOPT_URL, requestString.c_str());
                 curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
                 curl_easy_setopt(curl, CURLOPT_POSTFIELDS, json_data.c_str());
-                curl_easy_setopt(curl, CURLOPT_POST, 1L);
 
+                curl_easy_setopt(curl, CURLOPT_POST, 1L);
                 curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
                 curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L);
                 //curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
-
+                 
                 // Set up the write callback function
                 curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
-
+                
                 // Pass response string to write function
                 curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response);
-
                 curl_easy_perform(curl);
-                curl_easy_cleanup(curl);
 
                 // Call the user-supplied callback function with the response
-                if (callback) {
+                if (callback)
+                {
                     callback(response);
                 }
-            }
-            else
-            {
-                throw(exception("Failed attempt to initialize cURL."));
-            }
+                curl_slist_free_all(headers);
+                curl_easy_cleanup(curl);
+            }).detach();
         }
     };
+
+
+    Void PerformCurlRequest(ManagedCallback^ managedCallback, int requestType, vector<pair<string, string>>& requestData)
+    {
+        // Convert managed delegate to unmanaged function pointer
+        IntPtr ptr = Marshal::GetFunctionPointerForDelegate(managedCallback);
+        ResponseCallback nativeCallback = (ResponseCallback)ptr.ToPointer();
+        // Call the function
+        CurlClient(APP_SERVER_LINK).performCurlRequest(nativeCallback, requestType, requestData);
+    }
 }

@@ -62,6 +62,7 @@ namespace Project19 {
                 delete components;
             }
         }
+    private: ManagedCallback^ _callbackRoot;
     private: System::Windows::Forms::Panel^ panel1;
     private: System::Windows::Forms::Panel^ panel2;
     private: System::Windows::Forms::Button^ button1;
@@ -83,11 +84,12 @@ namespace Project19 {
     private: int game_hints, game_checks, game_time, game_attempts;
     private: bool checkEnabled = false;
 
-    private: delegate void ManagedCallback(const string& response);
     private: void myResponseHandler1(const string& response) {
-        String^ managedResponse = ""; //marshal_as<String^>(response);
-        for (char c : response)
-            managedResponse += (Char)c;
+        String^ managedResponse = gcnew String(response.c_str());
+        this->Invoke(gcnew Action<String^>(this, &LevelForm::handleResponseType1), managedResponse); // marshal to UI thread, in case we're on a separate thread
+    }
+    private: void handleResponseType1(String^ managedResponse) {
+        string response = msclr::interop::marshal_as<string>(managedResponse);
 
         try
         {
@@ -133,11 +135,13 @@ namespace Project19 {
             this->Close();
         }
     }
-    private: void myResponseHandler2(const string& response) {
-        String^ managedResponse = ""; //marshal_as<String^>(response);
-        for (char c : response)
-            managedResponse += (Char)c;
 
+
+    private: void myResponseHandler2(const string& response) {
+        String^ managedResponse = gcnew String(response.c_str());
+        this->Invoke(gcnew Action<String^>(this, &LevelForm::handleResponseType2), managedResponse); // marshal to UI thread, in case we're on a separate thread
+    }
+    private: void handleResponseType2(String^ managedResponse) {
         System::Windows::Forms::MessageBox::Show("Server response: " + managedResponse);
         this->panel2->Enabled = true;
     }
@@ -666,13 +670,8 @@ namespace Project19 {
         requestData.push_back(pair<string, string>("filename", filename));
 
 
-        // Create a managed delegate instance
-        ManagedCallback^ managedCallback = gcnew ManagedCallback(this, &LevelForm::myResponseHandler1);
-        // Convert managed delegate to unmanaged function pointer
-        IntPtr ptr = Marshal::GetFunctionPointerForDelegate(managedCallback);
-        ResponseCallback nativeCallback = (ResponseCallback)ptr.ToPointer();
-        // Call the function
-        curlClient().performCurlRequest(nativeCallback, requestType, requestData);
+        _callbackRoot = gcnew ManagedCallback(this, &LevelForm::myResponseHandler1);
+        PerformCurlRequest(_callbackRoot, requestType, requestData);
     }
 
     private: System::Void updateUserStatistics(bool win) {
@@ -694,13 +693,8 @@ namespace Project19 {
         requestData.push_back(pair<string, string>("username", username));
 
 
-        // Create a managed delegate instance
-        ManagedCallback^ managedCallback = gcnew ManagedCallback(this, &LevelForm::myResponseHandler2);
-        // Convert managed delegate to unmanaged function pointer
-        IntPtr ptr = Marshal::GetFunctionPointerForDelegate(managedCallback);
-        ResponseCallback nativeCallback = (ResponseCallback)ptr.ToPointer();
-        // Call the function
-        curlClient().performCurlRequest(nativeCallback, requestType, requestData);
+        _callbackRoot = gcnew ManagedCallback(this, &LevelForm::myResponseHandler2);
+        PerformCurlRequest(_callbackRoot, requestType, requestData);
     }
     };
 }

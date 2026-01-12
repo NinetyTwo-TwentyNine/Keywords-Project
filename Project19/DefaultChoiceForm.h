@@ -44,17 +44,19 @@ namespace Project19 {
             }
         }
 
+    private: ManagedCallback^ _callbackRoot;
     private: System::Windows::Forms::Button^ button1;
     private: System::Windows::Forms::Button^ button2;
     private: ArrayList^ buttonArray;
     private: String^ selected_level;
     private: int buttonArraySize = 10;
 
-    private: delegate void ManagedCallback(const string& response);
-    private: void myResponseHandler(const string& response) {
-        String^ managedResponse = ""; //marshal_as<String^>(response);
-        for (char c : response)
-            managedResponse += (Char)c;
+    private: void myResponseHandler1(const string& response) {
+        String^ managedResponse = gcnew String(response.c_str());
+        this->Invoke(gcnew Action<String^>(this, &DefaultChoiceForm::handleResponseType1), managedResponse); // marshal to UI thread, in case we're on a separate thread
+    }
+    private: void handleResponseType1(String^ managedResponse) {
+        string response = msclr::interop::marshal_as<string>(managedResponse);
 
         try
         {
@@ -203,13 +205,8 @@ namespace Project19 {
 
         requestData.push_back(pair<string, string>("username", username));
 
-        // Create a managed delegate instance
-        ManagedCallback^ managedCallback = gcnew ManagedCallback(this, &DefaultChoiceForm::myResponseHandler);
-        // Convert managed delegate to unmanaged function pointer
-        IntPtr ptr = Marshal::GetFunctionPointerForDelegate(managedCallback);
-        ResponseCallback nativeCallback = (ResponseCallback)ptr.ToPointer();
-        // Call the function
-        curlClient().performCurlRequest(nativeCallback, requestType, requestData);
+        _callbackRoot = gcnew ManagedCallback(this, &DefaultChoiceForm::myResponseHandler1);
+        PerformCurlRequest(_callbackRoot, requestType, requestData);
     }
     };
 }
